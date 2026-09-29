@@ -29,9 +29,35 @@ terraform apply
 terraform destroy   # always clean up
 ```
 
+## Proof: isolation test
+
+From the **dev** instance (reached privately via EC2 Instance Connect Endpoint, no public IP, no SSH keys):
+
+| Test | Result |
+|------|--------|
+| dev -> shared (`10.0.1.100`) | 3/3 received, 0% loss |
+| dev -> prod (`10.2.1.21`) | 0/3 received, 100% loss |
+
+Prod's security group **allows** ping from `10.0.0.0/8`, so the failure comes from **routing** (no dev <-> prod peering, peering is non-transitive), not the firewall.
+
+![Ping proof](docs/images/ping-proof.png)
+
+## Security
+
+- Private subnets only, no public IPs
+- Access via EC2 Instance Connect Endpoint (no bastion, no SSH keys stored)
+- IMDSv2 required, encrypted EBS volumes
+- Least-privilege security groups (SSH only from the endpoint)
+
 ## Roadmap
 
 - [x] Phase 1: VPCs, subnets, route tables, peering
-- [ ] Phase 2: EC2 test instances + security groups
-- [ ] Phase 3: Connectivity tests (dev -> shared works, dev -> prod fails)
-- [ ] Phase 4: VPC Flow Logs as proof
+- [x] Phase 2: EC2 test instances + security groups
+- [x] Phase 3: Connectivity tests (dev -> shared works, dev -> prod fails)
+- [ ] Phase 4: VPC Flow Logs
+
+Test instances are toggled off after testing to stay at $0:
+
+```bash
+terraform apply -var="create_test_instances=false"
+```
